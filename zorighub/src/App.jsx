@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 import { AuthProvider } from './context/AuthContext';
-import Header from './components/Header';
+import Header from './components/nav/Header';
 import HeroSection from './components/HeroSection';
 import ArtisanCarousel from './components/ArtisanCarousel';
 import UniqueValueSection from './components/UniqueValueSection';
@@ -13,10 +13,7 @@ import CulturalRescueSection from './components/CulturalRescueSection';
 import FeaturedProductsSection from './components/FeaturedProductsSection';
 import StoryDiscoverySection from './components/StoryDiscoverySection';
 import TrustIndicatorsSection from './components/TrustIndicatorsSection';
-import Footer from './components/Footer';
-
-// Buyer
-import BuyerDashboard from './pages/buyers/BuyerDashboard';
+import Footer from './components/footer/Footer';
 
 // Admin pages
 import AdminDashboard from './pages/admins/AdminDashboard';

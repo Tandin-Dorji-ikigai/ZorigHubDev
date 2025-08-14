@@ -1,120 +1,121 @@
-import { useState, useEffect } from 'react';
-import { useProducts } from '../hooks/useProducts';
-import ProductCard from './ProductCard';
-import weaveImage from '../assets/images/crafts/weave.jpg';
-import silverBowlImage from '../assets/images/crafts/silver-bowl.jpg';
+/* FeaturedProductsSection.jsx */
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import weaveImage from "../assets/images/crafts/weave.jpg";
+import silverBowlImage from "../assets/images/crafts/silver-bowl.jpg";
+import altWeave from "../assets/images/crafts/weave.jpg";
 
 const FeaturedProductsSection = () => {
-  const { getFeaturedProducts } = useProducts();
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fallback products with local images
-  const fallbackProducts = [
-    {
-      id: 1,
-      name: "Bhutanese Silk Scarf",
-      description: "Handwoven with 8 traditional symbols of protection",
-      price: 3250,
-      artisanShare: 850,
-      image: weaveImage,
-      artisan: { name: "Tshering" },
-      category: "Medical debt relief"
-    },
-    {
-      id: 2,
-      name: "Silver Offering Bowls",
-      description: "Ritual vessels crafted following temple specifications",
-      price: 12800,
-      artisanShare: 3200,
-      image: silverBowlImage,
-      artisan: { name: "Dorji" },
-      category: "Disability artisan"
-    }
+  // Exactly 3 featured demo products
+  const baseProducts = [
+    { id: 1, name: "Bhutanese Silk Scarf", image: weaveImage },
+    { id: 2, name: "Silver Offering Bowls", image: silverBowlImage },
+    { id: 3, name: "Heritage Scarf (Indigo)", image: altWeave },
   ];
 
-  useEffect(() => {
-    loadFeaturedProducts();
+  // Repeat them to create a long scrolling rail
+  const products = useMemo(() => {
+    const list = [];
+    for (let i = 0; i < 4; i++) {
+      list.push(...baseProducts.map((p, k) => ({ ...p, key: `${i}-${k}` })));
+    }
+    return list;
   }, []);
 
-  const loadFeaturedProducts = async () => {
-    try {
-      setLoading(true);
-      const products = await getFeaturedProducts();
-      
-      if (products && products.length > 0) {
-        setFeaturedProducts(products);
-      } else {
-        // Use fallback products if no featured products from API
-        setFeaturedProducts(fallbackProducts);
-      }
-    } catch (error) {
-      console.error('Failed to load featured products:', error);
-      // Use fallback products on error
-      setFeaturedProducts(fallbackProducts);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const railRef = useRef(null);
+  const [page, setPage] = useState(0);
+  const totalPages = 4;
 
-  if (loading) {
-    return (
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-            Best Sellers Changing Lives
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[...Array(4)].map((_, index) => (
-              <div key={index} className="bg-white rounded-xl overflow-hidden shadow-lg animate-pulse">
-                <div className="w-full h-64 bg-gray-200"></div>
-                <div className="p-5">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  // Ensure we have at least 4 products for display (mix API + fallback)
-  const displayProducts = [...featuredProducts];
-  while (displayProducts.length < 4) {
-    displayProducts.push({
-      id: `placeholder-${displayProducts.length}`,
-      name: "Traditional Craft",
-      description: "Handcrafted with traditional techniques",
-      price: 0,
-      artisanShare: 0,
-      artisan: { name: "Artisan" },
-      category: "Category"
-    });
-  }
+  // Auto-scroll the rail
+  useEffect(() => {
+    const el = railRef.current;
+    if (!el) return;
+    const id = setInterval(() => {
+      setPage((prev) => {
+        const next = (prev + 1) % totalPages;
+        const snapWidth = el.scrollWidth / totalPages;
+        el.scrollTo({ left: next * snapWidth, behavior: "smooth" });
+        return next;
+      });
+    }, 3500);
+    return () => clearInterval(id);
+  }, []);
 
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-          Best Sellers Changing Lives
+    <section className="relative overflow-hidden bg-white">
+      {/* Headline */}
+      <div className="mx-auto max-w-6xl px-4 pt-16 pb-10 text-center">
+        <h2 className="text-[clamp(1.9rem,4.8vw,3.25rem)] font-extrabold leading-tight tracking-tight">
+          <span className="text-[#1C2733] block">Best Sellers</span>
+          <span className="text-red-600 block">Changing Lives</span>
         </h2>
+        <p className="mt-3 text-gray-600 max-w-xl mx-auto">
+          Curated crafts with real impact — only the standouts this week.
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {displayProducts.slice(0, 4).map((product) => (
-            <ProductCard 
-              key={product.id || product._id} 
-              product={product} 
-              showArtisanStory={true}
+        {/* Dot indicators */}
+        <div className="mt-4 flex items-center justify-center gap-2">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <span
+              key={i}
+              className={`h-2 w-2 rounded-full transition ${i === page ? "bg-red-600" : "bg-gray-300"
+                }`}
+              aria-hidden="true"
             />
           ))}
         </div>
+      </div>
+
+      {/* Horizontal image rail */}
+      <div className="relative">
+        <div
+          ref={railRef}
+          className="flex gap-6 px-4 pb-24 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar"
+        >
+          {products.map((p, i) => (
+            <figure
+              key={p.key}
+              title={p.name}
+              className={[
+                "shrink-0 snap-start",
+                "w-[220px] sm:w-[260px] md:w-[300px] h-[260px] sm:h-[300px] md:h-[340px]",
+                "rounded-[28px] overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.12)] ring-1 ring-black/5",
+                // gentle staggering for Pinterest vibe
+                i % 3 === 0
+                  ? "translate-y-2"
+                  : i % 3 === 1
+                    ? "-translate-y-3"
+                    : "translate-y-6",
+                "transition-transform duration-300 hover:-translate-y-1",
+              ].join(" ")}
+            >
+              <img
+                src={p.image}
+                alt={p.name}
+                className="h-full w-full object-cover"
+                onError={(e) => (e.currentTarget.src = weaveImage)}
+                loading="lazy"
+              />
+            </figure>
+          ))}
+        </div>
+
+        {/* Curved white mask at the bottom (like Pinterest) */}
+        <svg
+          className="pointer-events-none absolute inset-x-0 -bottom-1 z-20"
+          viewBox="0 0 1440 140"
+          height="140"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          {/* Upward curve that hides the lower part of tiles */}
+          <path
+            d="M0,140 C360,20 1080,20 1440,140 L1440,140 L0,140 Z"
+            fill="#ffffff"
+          />
+        </svg>
       </div>
     </section>
   );
 };
 
 export default FeaturedProductsSection;
-
