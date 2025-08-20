@@ -41,6 +41,9 @@ import BuyerCart from './pages/buyers/BuyerCart';
 import BuyerCheckout from './pages/buyers/BuyerCheckout';
 import './App.css';
 
+//auth pages
+import Login from './components/auth/login';
+import NdiLogin from './components/auth/NdiLogin';
 const HomePage = () => (
   <div className="bg-gray-50 text-gray-900">
     <Header />
@@ -61,6 +64,11 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
+
+          {/* auth */}
+
+          <Route path="/login" element={<Login />} />
+          <Route path="/ndi" element={< NdiLogin />} />
           {/* Home */}
           <Route path="/" element={<HomePage />} />
 
