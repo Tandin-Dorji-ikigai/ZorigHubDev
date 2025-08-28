@@ -44,6 +44,8 @@ import './App.css';
 //auth pages
 import Login from './components/auth/login';
 import NdiLogin from './components/auth/NdiLogin';
+import GoogleSuccess from './components/auth/GoogleSuccess';
+
 const HomePage = () => (
   <div className="bg-gray-50 text-gray-900">
     <Header />
@@ -69,6 +71,7 @@ function App() {
 
           <Route path="/login" element={<Login />} />
           <Route path="/ndi" element={< NdiLogin />} />
+          <Route path="/google-success" element={< GoogleSuccess />} />
           {/* Home */}
           <Route path="/" element={<HomePage />} />
 
@@ -98,7 +101,7 @@ function App() {
           <Route path="/artisan/profile" element={<ArtisanProfile />} />
 
           {/* Fallback */}
-          <Route path="*" element={<HomePage />} />
+          {/* <Route path="*" element={<HomePage />} /> */}
         </Routes>
       </Router>
     </AuthProvider>

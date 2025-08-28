@@ -3,8 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import ndiLogo from "@/assets/images/ndi/transparent-ndi.png";
 
-const GOOGLE_OAUTH_START = "http://localhost:5000/api/auth/google/start"; // update if needed
-
+const GOOGLE_OAUTH_START = "http://localhost:5173/api/auth/google/start";
 export default function Login() {
 
     const navigate = useNavigate();
