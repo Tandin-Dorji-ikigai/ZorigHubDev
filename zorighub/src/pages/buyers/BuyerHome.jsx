@@ -1,57 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios'; // Make sure axios is imported
 import BuyerNav from '../../components/buyer/BuyerNav';
 import BuyerFooter from '../../components/buyer/BuyerFooter';
 import { FaShoppingCart } from 'react-icons/fa';
 import userImage from '../../assets/images/people/tshering.jpg';
 import productImage from '../../assets/images/crafts/basket.jpg';
-const featuredProducts = [
-    {
-        id: 1,
-        name: 'Bamboo basket',
-        description: 'This is a bamboo basket',
-        price: 'Nu. 4000',
-        image: productImage
-    },
-    {
-        id: 2,
-        name: 'Thangka Painting',
-        description: 'Sacred thangka depicting Guru Rinpoche, painted with natural mineral pigments.',
-        price: 'Nu. 8000',
-        image: productImage
-    },
-    {
-        id: 3,
-        name: 'Traditional Wooden Bowl (Phob)',
-        description: 'Hand-carved wooden bowl used in traditional Bhutanese households.',
-        price: 'Nu. 1500',
-        image: productImage
-    },
-    {
-        id: 4,
-        name: 'Traditional Bhutanese Brickwork Wall Art',
-        description: 'Decorative wall piece replicating ancient Bhutanese brickwork patterns.',
-        price: 'Nu. 3500',
-        image: productImage
-    }
-];
 
-const topArtisans = [
-    { id: 1, name: 'Pema Dorji', image: userImage },
-    { id: 2, name: 'Sonam Choden', image: userImage },
-    { id: 3, name: 'Karma Wangchuk', image: userImage },
-    { id: 4, name: 'Jigme Zangmo', image: userImage },
-    { id: 5, name: 'Choden Lhamo', image: userImage }
-];
-
-const recentlyViewed = [
-    { id: 1, name: 'Ceramic Tea Set', price: 'Nu. 1200', image: productImage },
-    { id: 2, name: 'Handmade Notebook', price: 'Nu. 3200', image: productImage },
-    { id: 3, name: 'Traditional Necklace', price: 'Nu. 5200', image: productImage },
-    { id: 4, name: 'Woolen Scarf', price: 'Nu. 6200', image: productImage },
-    { id: 5, name: 'Carved Mask', price: 'Nu. 200', image: productImage }
-];
+const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5173";
 
 function BuyerHome() {
+    // State to store the fetched featured products
+    const [featuredProducts, setFeaturedProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch the featured products from the backend on component mount
+    useEffect(() => {
+        const fetchFeaturedProducts = async () => {
+            try {
+                const { data } = await axios.get(`${API_BASE}/api/products/featured`, { withCredentials: true });
+                setFeaturedProducts(data); // Set the fetched products in state
+            } catch (error) {
+                console.error("Error fetching featured products:", error);
+            } finally {
+                setLoading(false); // Stop loading after the fetch attempt
+            }
+        };
+
+        fetchFeaturedProducts(); // Call the function to fetch products
+    }, []); // Empty dependency array to run once on mount
+
+    // Dummy data for Top Artisans and Recently Viewed (for now)
+    const topArtisans = [
+        { id: 1, name: 'Pema Dorji', image: userImage },
+        { id: 2, name: 'Sonam Choden', image: userImage },
+        { id: 3, name: 'Karma Wangchuk', image: userImage },
+        { id: 4, name: 'Jigme Zangmo', image: userImage },
+        { id: 5, name: 'Choden Lhamo', image: userImage }
+    ];
+
+    const recentlyViewed = [
+        { id: 1, name: 'Ceramic Tea Set', price: 'Nu. 1200', image: productImage },
+        { id: 2, name: 'Handmade Notebook', price: 'Nu. 3200', image: productImage },
+        { id: 3, name: 'Traditional Necklace', price: 'Nu. 5200', image: productImage },
+        { id: 4, name: 'Woolen Scarf', price: 'Nu. 6200', image: productImage },
+        { id: 5, name: 'Carved Mask', price: 'Nu. 200', image: productImage }
+    ];
+
     return (
         <div className="bg-gray-50 min-h-screen flex flex-col">
             <BuyerNav />
@@ -76,26 +70,40 @@ function BuyerHome() {
                             </select>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {featuredProducts.map(product => (
-                            <div key={product.id} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden flex flex-col">
-                                <img src={product.image} alt={product.name} className="w-full h-48 object-cover" />
-                                <div className="p-4 flex flex-col flex-grow">
-                                    <h3 className="font-semibold text-lg text-gray-800 mb-1">{product.name}</h3>
-                                    <p className="text-sm text-gray-600 flex-grow">{product.description}</p>
-                                    <div className="mt-4 flex items-center justify-between">
-                                        <p className="text-red-600 font-bold text-lg">{product.price}</p>
-                                        <div className="flex gap-2">
-                                            <button className="flex items-center bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">
-                                                <FaShoppingCart className="mr-1" /> Add
-                                            </button>
-                                            <button className="border border-gray-300 px-3 py-1 rounded text-sm">View</button>
+
+                    {/* Display No Featured Products UI if featuredProducts is empty */}
+                    {loading ? (
+                        <div className="text-center py-12">
+                            <p className="text-xl font-bold text-gray-700">Loading...</p>
+                        </div>
+                    ) : featuredProducts.length === 0 ? (
+                        <div className="text-center py-12">
+                            <h3 className="text-2xl font-semibold text-gray-700">No Featured Products Available</h3>
+                            <p className="text-lg text-gray-500 mt-2">It looks like there are no featured products at the moment. Please check back later!</p>
+                           
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {featuredProducts.map(product => (
+                                <div key={product._id} className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden flex flex-col">
+                                    <img src={product.image} alt={product.name} className="w-full h-48 object-cover" />
+                                    <div className="p-4 flex flex-col flex-grow">
+                                        <h3 className="font-semibold text-lg text-gray-800 mb-1">{product.name}</h3>
+                                        <p className="text-sm text-gray-600 flex-grow">{product.description}</p>
+                                        <div className="mt-4 flex items-center justify-between">
+                                            <p className="text-red-600 font-bold text-lg">{product.price}</p>
+                                            <div className="flex gap-2">
+                                                <button className="flex items-center bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">
+                                                    <FaShoppingCart className="mr-1" /> Add
+                                                </button>
+                                                <button className="border border-gray-300 px-3 py-1 rounded text-sm">View</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 {/* Top Artisans */}

@@ -1,9 +1,101 @@
-// src/pages/ArtisanProfile.jsx
-import React from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import ArtisanLayout from '@/components/artisans/ArtisanLayout';
-import userPhoto from "../../assets/images/people/pema.jpg";
+import userPhotoFallback from "../../assets/images/people/pema.jpg";
+import { uploadImageToIPFS } from "@/lib/ipfsUpload";
+
+const DEV_USER_KEY = "zorighub_dev_user";
+const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5173";
 
 function ArtisanProfile() {
+    const currentUser = useMemo(() => {
+        try {
+            const raw = localStorage.getItem(DEV_USER_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    }, []);
+
+    const [photo, setPhoto] = useState(currentUser?.photo || userPhotoFallback);
+    const [fullName, setFullName] = useState(currentUser?.fullName || "Sonam Dorji");
+    const [dzongkhag, setDzongkhag] = useState(currentUser?.dzongkhag || "Paro");
+    const [gewog, setGewog] = useState(currentUser?.gewog || "");
+    const [craftType, setCraftType] = useState("Weaving");
+
+    const cid = currentUser?.CID || "";
+    const gender = currentUser?.gender || "";
+    const isActive = currentUser?.isActive ?? true;
+
+    const [saving, setSaving] = useState(false);
+    const [file, setFile] = useState(null);    // ← if set, a new image was chosen
+    const fileRef = useRef(null);
+
+    const regionDisplay = [gewog, dzongkhag].filter(Boolean).join(", ") + (dzongkhag ? ", Bhutan" : "");
+
+    const handleUploadClick = () => fileRef.current?.click();
+
+    const handleFileChange = (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        setFile(f);                               // mark as changed
+        const url = URL.createObjectURL(f);
+        setPhoto(url);                            // local preview only (no upload yet)
+    };
+
+    // Save profile: if user selected a new file, upload to IPFS first, then PATCH profile
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+
+            // 1) If a new local file is selected, upload to IPFS now
+            let photoUrl = photo;
+            if (file) {
+                const { url } = await uploadImageToIPFS(file, {
+                    kind: "avatar",
+                    userId: currentUser?._id || "",
+                });
+                photoUrl = url;        // use hosted IPFS url for persistence
+                setPhoto(url);         // update preview to the hosted image
+            }
+
+            // 2) Prepare payload (skip blob previews)
+            const payload = {
+                fullName,
+                dzongkhag,
+                gewog,
+                ...(gender ? { gender } : {}),
+                ...(cid ? { CID: cid } : {}),
+                ...(photoUrl && !photoUrl.startsWith("blob:") ? { photo: photoUrl } : {}),
+            };
+
+            // 3) PATCH to backend
+            const url = currentUser?._id
+                ? `${API_BASE}/api/artisans/${currentUser._id}`
+                : `${API_BASE}/api/artisans/cid/${encodeURIComponent(cid)}`;
+
+            const { data: updated } = await axios.patch(url, payload, { withCredentials: true });
+
+            // 4) Sync dev session + local UI
+            localStorage.setItem(DEV_USER_KEY, JSON.stringify(updated));
+            setPhoto(updated.photo || photoUrl || photo);
+            setFullName(updated.fullName ?? fullName);
+            setDzongkhag(updated.dzongkhag ?? dzongkhag);
+            setGewog(updated.gewog ?? gewog);
+
+            // clear the file marker since save is done
+            setFile(null);
+
+            alert("Profile updated successfully!");
+        } catch (err) {
+            console.error(err);
+            const msg = err?.response?.data?.error || "Failed to update profile.";
+            alert(msg);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <ArtisanLayout>
             <main className="max-w-6xl mx-auto px-4 py-8">
@@ -14,70 +106,135 @@ function ArtisanProfile() {
                             <div className="relative mb-4">
                                 <img
                                     id="profileImage"
-                                    src={userPhoto}
+                                    src={photo}
                                     alt="Artisan Profile"
                                     className="w-40 h-40 rounded-full object-cover border-4 border-[#FC2839] shadow-lg"
                                 />
                             </div>
-                            <button
-                                id="uploadBtn"
-                                className="bg-[#FC2839] text-white px-6 py-2 rounded-full font-medium hover:bg-red-700"
-                            >
-                                Upload New Photo
-                            </button>
+
+                            <input
+                                type="file"
+                                accept="image/*"
+                                ref={fileRef}
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
+                            <div className="flex flex-col items-center gap-2">
+                                <button
+                                    id="chooseBtn"
+                                    onClick={handleUploadClick}
+                                    className="bg-[#FC2839] text-white px-4 py-2 rounded-full font-medium hover:bg-red-700"
+                                >
+                                    Choose Photo
+                                </button>
+                                <p className="text-xs text-gray-500">
+                                    Your image will upload to IPFS when you save.
+                                </p>
+                            </div>
+
                             <div className="mt-4 text-center">
-                                <h3 id="previewName" className="text-xl font-bold">Sonam Dorji</h3>
-                                <p id="previewRegion" className="text-gray-600">Paro, Bhutan</p>
+                                <h3 id="previewName" className="text-xl font-bold">
+                                    {fullName}
+                                </h3>
+                                <p id="previewRegion" className="text-gray-600">
+                                    {[gewog, dzongkhag].filter(Boolean).join(", ") || "Bhutan"}
+                                </p>
                             </div>
                         </div>
+
                         <div className="md:w-2/3 p-6">
                             <h2 className="text-2xl font-bold mb-6">Artisan Profile</h2>
+
                             <div className="space-y-4">
+                                {/* Full Name */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Full Name
+                                    </label>
                                     <input
                                         type="text"
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#FC2839] focus:border-[#FC2839]"
-                                        value="Sonam Dorji"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
                                     />
                                 </div>
+
+                                {/* Region (Dzongkhag) + Gewog */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                                        <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#FC2839] focus:border-[#FC2839]">
-                                            <option selected>Paro</option>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Dzongkhag (Region)
+                                        </label>
+                                        <select
+                                            value={dzongkhag}
+                                            onChange={(e) => setDzongkhag(e.target.value)}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#FC2839] focus:border-[#FC2839]"
+                                        >
+                                            <option>Paro</option>
                                             <option>Thimphu</option>
                                             <option>Bumthang</option>
                                             <option>Punakha</option>
                                         </select>
                                     </div>
+
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Craft Type</label>
-                                        <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#FC2839] focus:border-[#FC2839]">
-                                            <option selected>Weaving</option>
-                                            <option>Wood Carving</option>
-                                            <option>Thangka Painting</option>
-                                        </select>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Gewog (Optional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g., Kawang"
+                                            value={gewog}
+                                            onChange={(e) => setGewog(e.target.value)}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#FC2839] focus:border-[#FC2839]"
+                                        />
                                     </div>
                                 </div>
+
+                                {/* Craft Type (not saved yet—schema doesn't have it) */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Training Certificates</label>
-                                    <div className="flex items-center space-x-4">
-                                        <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#FC2839] focus:border-[#FC2839]">
-                                            <option selected>Zorig Chusum - Traditional Arts School</option>
-                                            <option>Private Master-Apprentice</option>
-                                        </select>
-                                        <button className="bg-[#FC2839] text-white px-4 py-2 rounded-lg hover:bg-red-700">
-                                            <i className="fas fa-upload mr-2"></i> Upload
-                                        </button>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Craft Type
+                                    </label>
+                                    <select
+                                        value={craftType}
+                                        onChange={(e) => setCraftType(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#FC2839] focus:border-[#FC2839]"
+                                    >
+                                        <option>Weaving</option>
+                                        <option>Wood Carving</option>
+                                        <option>Thangka Painting</option>
+                                        <option>Embroidery</option>
+                                        <option>Pottery</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        (Not saved — add <code>craftType</code> to your schema if you want this persisted.)
+                                    </p>
+                                </div>
+
+                                {/* Read-only from login */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            CID
+                                        </label>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={cid}
+                                            className="w-full px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-700"
+                                        />
                                     </div>
                                 </div>
+
                                 <div className="pt-4">
                                     <button
                                         id="saveProfileBtn"
-                                        className="bg-[#FC2839] text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700"
+                                        onClick={handleSave}
+                                        disabled={saving}
+                                        className="bg-[#FC2839] text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
-                                        Save Profile Changes
+                                        {saving ? "Saving..." : "Save Profile Changes"}
                                     </button>
                                 </div>
                             </div>
@@ -93,7 +250,7 @@ function ArtisanProfile() {
                             { icon: 'check-circle', label: 'Verified Artisan', color: 'green' },
                             { icon: 'leaf', label: 'Green Artisan', color: 'blue' },
                             { icon: 'star', label: 'Master Artisan', color: 'yellow' },
-                            { icon: 'hands-helping', label: 'Community Mentor', color: 'red' }
+                            { icon: 'hands-helping', label: 'Community Mentor', color: 'red' },
                         ].map((badge, i) => (
                             <div
                                 key={i}

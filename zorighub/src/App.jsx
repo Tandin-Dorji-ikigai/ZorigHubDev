@@ -77,7 +77,7 @@ function App() {
 
           {/* Buyer Dashboard */}
           <Route path="/buyer" element={<BuyerHome />} />
-          <Route path="/buyer/productDetails" element={<BuyerProductDetails />} />
+          <Route path="/buyer/productDetails/:id" element={<BuyerProductDetails />} />
           <Route path="/buyer/BuyerMarketPlace" element={<BuyerMarketPlace />} />
           <Route path="/buyer/BuyerAbout" element={<BuyerAbout />} />
           <Route path="/buyer/orders" element={<BuyerOrders />} />

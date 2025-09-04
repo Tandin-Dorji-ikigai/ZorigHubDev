@@ -1,23 +1,59 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import ArtisanLayout from '@/components/artisans/ArtisanLayout';
-import { useState } from "react";
 import AddProductModal from "@/components/artisans/AddProductModal";
 
-
+const DEV_USER_KEY = "zorighub_dev_user";
+const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5173";
 
 function ArtisanHome() {
-
     const [modalOpen, setModalOpen] = useState(false);
 
-    const handleSubmitProduct = () => {
-        console.log("Submitting new product...");
-        setModalOpen(false);
+    // ---- user ----
+    const currentUser = useMemo(() => {
+        try {
+            const raw = localStorage.getItem(DEV_USER_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    }, []);
+    const userId = currentUser?._id || "685d32e7772899830701a9ac"; // fallback to your test user
+    const displayName = currentUser?.fullName || "Artisan";
+
+    // ---- products state ----
+    const [products, setProducts] = useState([]);
+    const [prodLoading, setProdLoading] = useState(false);
+    const [prodError, setProdError] = useState("");
+
+    const fetchProducts = async () => {
+        if (!userId) return;
+        setProdLoading(true);
+        setProdError("");
+        try {
+            const { data } = await axios.get(`${API_BASE}/api/products/artisan/${userId}`, {
+                withCredentials: true,
+            });
+            setProducts(Array.isArray(data) ? data : []);
+        } catch (e) {
+            console.error(e);
+            setProdError("Failed to load your products.");
+            setProducts([]);
+        } finally {
+            setProdLoading(false);
+        }
     };
 
-    const handleUploadImage = () => {
-        console.log("Uploading image...");
+    useEffect(() => {
+        fetchProducts();
+    }, [userId]);
+
+    const refreshProducts = () => {
+        fetchProducts();
     };
 
+    // derived
+    const totalProducts = prodLoading ? "…" : products.length;
 
     return (
         <ArtisanLayout>
@@ -27,8 +63,15 @@ function ArtisanHome() {
                 <div className="bg-white rounded-lg shadow-sm p-6">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-800">Welcome back, Choden</h1>
-                            <p className="text-gray-600 mt-1">Here's what's happening with your business today</p>
+                            <h1 className="text-2xl font-bold text-gray-800">
+                                Welcome back, {displayName.split(" ")[0]}
+                            </h1>
+                            <p className="text-gray-600 mt-1">
+                                Here's what's happening with your business today
+                            </p>
+                            {prodError && (
+                                <p className="text-sm text-red-600 mt-2">{prodError}</p>
+                            )}
                         </div>
                         <div className="mt-4 md:mt-0 flex space-x-3">
                             <button
@@ -49,19 +92,22 @@ function ArtisanHome() {
                         </div>
                     </div>
                 </div>
+
+                {/* Add Product Modal */}
                 <AddProductModal
                     isOpen={modalOpen}
                     onClose={() => setModalOpen(false)}
-                    onSubmit={handleSubmitProduct}
-                    onUpload={handleUploadImage}
+                    onSuccess={() => {
+                        setModalOpen(false);
+                        refreshProducts();
+                    }}
                 />
-
 
                 {/* Stats Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                     <StatCard
                         title="Total Products"
-                        value="1"
+                        value={totalProducts}
                         icon="fas fa-tshirt"
                         iconBg="bg-red-100"
                         iconColor="text-red-500"
@@ -97,8 +143,7 @@ function ArtisanHome() {
                     />
                 </div>
 
-
-                {/* Recent Orders */}
+                {/* Recent Orders (static demo) */}
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden mt-8">
                     <div className="px-7 py-5 border-b border-gray-200">
                         <div className="flex items-center justify-between">

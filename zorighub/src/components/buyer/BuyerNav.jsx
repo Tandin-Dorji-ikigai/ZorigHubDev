@@ -1,27 +1,34 @@
 // src/components/buyer/BuyerNav.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import Logo from "../../assets/logo.png";
+
+// ✅ use shared helpers so all components agree on shapes/URLs
+import { getMe } from "@/lib/apiMe";
+import { getCart } from "@/lib/cartApi";
 
 function BuyerNav() {
     const linkBase = "px-3 py-2 text-sm font-medium transition-colors duration-200";
     const linkActive = "text-red-600 border-b-2 border-red-600";
     const linkInactive = "text-gray-700 hover:text-red-600";
 
-    const API_BASE = import.meta.env.VITE_BACKEND_API;
     const [me, setMe] = useState(null);
     const [loadingMe, setLoadingMe] = useState(true);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0); // 👈 dynamic cart badge
+
     const menuRef = useRef(null);
     const navigate = useNavigate();
 
+    // --- load user
     useEffect(() => {
         let cancelled = false;
         (async () => {
             try {
-                const res = await axios.get(`${API_BASE}/api/logged/me`, { withCredentials: true });
-                if (!cancelled) setMe(res.data);
+                setLoadingMe(true);
+                const res = await getMe();              // may be { user: {...} } based on your backend
+                const u = res?.user ?? res ?? null;     // normalize
+                if (!cancelled) setMe(u);
             } catch {
                 if (!cancelled) setMe(null);
             } finally {
@@ -29,7 +36,41 @@ function BuyerNav() {
             }
         })();
         return () => { cancelled = true; };
-    }, [API_BASE]);
+    }, []);
+
+    // --- load & keep cart count fresh
+    useEffect(() => {
+        if (!me) return;
+        let cancelled = false;
+
+        const getUserId = (u) => u?._id || u?.id || u?.userId;
+
+        const refreshCartCount = async () => {
+            try {
+                const userId = getUserId(me);
+                if (!userId) return;
+                const cart = await getCart(userId);
+                const count = Array.isArray(cart?.items) ? cart.items.reduce((n, it) => n + (Number(it.quantity) || 0), 0) : 0;
+                if (!cancelled) setCartCount(count);
+            } catch {
+                if (!cancelled) setCartCount(0);
+            }
+        };
+
+        // initial + interval
+        refreshCartCount();
+        const int = setInterval(refreshCartCount, 30_000);
+
+        // react to global cart mutations (see note below)
+        const onCartUpdated = () => refreshCartCount();
+        window.addEventListener("cart:updated", onCartUpdated);
+
+        return () => {
+            cancelled = true;
+            clearInterval(int);
+            window.removeEventListener("cart:updated", onCartUpdated);
+        };
+    }, [me]);
 
     // Close on outside click / Esc
     useEffect(() => {
@@ -44,8 +85,8 @@ function BuyerNav() {
         };
     }, [menuOpen]);
 
-    const displayName = me?.user?.name || me?.user?.email?.split("@")[0] || "Guest";
-    const avatar = me?.user?.avatar || "https://static.thenounproject.com/png/4530368-200.png";
+    const displayName = me?.name || me?.fullName || me?.email?.split("@")[0] || "Guest";
+    const avatar = me?.avatar || "https://static.thenounproject.com/png/4530368-200.png";
 
     const handleProfileClick = () => {
         setMenuOpen(false);
@@ -54,7 +95,8 @@ function BuyerNav() {
 
     const handleLogout = async () => {
         try {
-            await axios.post(`${API_BASE}/api/logged/logout`, {}, { withCredentials: true });
+            // optional: call your logout endpoint if you keep it
+            // await axios.post(`${API_BASE}/api/logged/logout`, {}, { withCredentials: true });
         } catch (_) { }
         setMenuOpen(false);
         navigate('/');
@@ -79,10 +121,15 @@ function BuyerNav() {
 
                     {/* Right */}
                     <div className="hidden md:flex items-center space-x-5">
+                        {/* Cart */}
                         <div className="relative">
                             <NavLink to="/buyer/cart" className="text-gray-700 hover:text-red-600 relative inline-block">
-                                <i className="fas fa-shopping-cart text-xl"></i>
-                                <span className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">2</span>
+                                <i className="fas fa-shopping-cart text-xl" />
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none">
+                                        {cartCount > 9 ? "9+" : cartCount}
+                                    </span>
+                                )}
                             </NavLink>
                         </div>
 
@@ -130,10 +177,10 @@ function BuyerNav() {
                         </div>
                     </div>
 
-                    {/* Mobile hamburger (wire up later if needed) */}
+                    {/* Mobile hamburger */}
                     <div className="md:hidden flex items-center">
                         <button type="button" className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-red-600 focus:outline-none">
-                            <i className="fas fa-bars text-xl"></i>
+                            <i className="fas fa-bars text-xl" />
                         </button>
                     </div>
                 </div>

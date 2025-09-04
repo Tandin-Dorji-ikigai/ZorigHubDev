@@ -1,43 +1,34 @@
 // src/pages/buyer/BuyerMarketPlace.jsx
 import React, { useMemo, useState, useEffect } from "react";
+import axios from "axios";
 import BuyerHeader from "@/components/buyer/BuyerNav";
 import BuyerFooter from "@/components/buyer/BuyerFooter";
 import ImageF from "@/assets/images/crafts/scarf.jpg";
+import { useNavigate } from "react-router-dom";
+import { getMe } from "@/lib/apiMe";
 
 const PAGE_SIZE = 12;
+const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:5173";
 
-/* ---------- Card (matches screenshot) ---------- */
+/* ---------- Card ---------- */
+
 const ProductCard = ({ p, onAddToCart, onQuickView }) => (
     <article className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition">
-        {/* Image */}
         <img src={p.img} alt={p.title} className="w-full h-48 object-cover" />
-
-        {/* Body */}
         <div className="p-4">
-            {/* Title + Price */}
             <div className="flex items-start justify-between">
-                <h3 className="text-[18px] font-semibold text-[#1C2733] leading-snug">
-                    {p.title}
-                </h3>
+                <h3 className="text-[18px] font-semibold text-[#1C2733] leading-snug">{p.title}</h3>
                 <span className="text-red-600 font-extrabold whitespace-nowrap">
-                    Nu. {p.price.toLocaleString()}
+                    Nu. {Number(p.price || 0).toLocaleString()}
                 </span>
             </div>
-
-            {/* Short description */}
-            <p className="text-gray-600 text-sm mt-1">
-                {p.desc || "This is a handmade item"}
-            </p>
-
-            {/* Artisan + Region */}
+            <p className="text-gray-600 text-sm mt-1">{p.desc || "This is a handmade item"}</p>
             <p className="text-sm text-gray-700 mt-2 flex items-center gap-2">
                 <i className="fa-solid fa-location-dot text-red-500" />
                 <span className="font-medium">{p.artisan}</span>
                 <span className="text-gray-400">—</span>
                 <span className="text-gray-600">{p.region}</span>
             </p>
-
-            {/* Actions */}
             <div className="mt-3 flex items-center justify-between">
                 <button
                     onClick={() => onAddToCart?.(p)}
@@ -46,7 +37,6 @@ const ProductCard = ({ p, onAddToCart, onQuickView }) => (
                     <i className="fa-solid fa-cart-shopping" />
                     Add to Cart
                 </button>
-
                 <button
                     onClick={() => onQuickView?.(p)}
                     className="text-sm text-gray-600 hover:text-gray-800 inline-flex items-center gap-2"
@@ -60,41 +50,177 @@ const ProductCard = ({ p, onAddToCart, onQuickView }) => (
 );
 
 function BuyerMarketPlace() {
-    /* ---------- Dummy data ---------- */
-    const products = useMemo(
-        () => [
-            { id: 1, title: "Bhutanese Silk Scarf", artisan: "Dorji Wangchuk", category: "Textiles", region: "Thimphu", price: 3500, rating: 5, eco: true, createdAt: "2025-07-21", popularity: 96, img: ImageF, desc: "Fine silk scarf with traditional motifs." },
-            { id: 2, title: "Handwoven Wool Bag", artisan: "Pema Lhamo", category: "Accessories", region: "Paro", price: 2800, rating: 4, eco: true, createdAt: "2025-07-15", popularity: 88, img: ImageF, desc: "Sturdy wool shoulder bag, natural dyes." },
-            { id: 3, title: "Yak Wool Shawl", artisan: "Karma Dorji", category: "Textiles", region: "Bumthang", price: 4200, rating: 5, eco: false, createdAt: "2025-06-10", popularity: 91, img: ImageF, desc: "Warm yak wool with soft hand." },
-            { id: 4, title: "Traditional Belt", artisan: "Dechen Wangmo", category: "Accessories", region: "Haa", price: 1500, rating: 4, eco: true, createdAt: "2025-05-19", popularity: 72, img: ImageF, desc: "Colorful woven belt (kera)." },
-            { id: 5, title: "Bamboo Basket", artisan: "Sonam Choden", category: "Basketry", region: "Trashigang", price: 1200, rating: 5, eco: true, createdAt: "2025-07-29", popularity: 64, img: ImageF, desc: "Hand‑woven bamboo storage basket." },
-            { id: 6, title: "Wood Carved Mask", artisan: "Jigme Dorji", category: "Woodwork", region: "Punakha", price: 6200, rating: 5, eco: false, createdAt: "2025-05-01", popularity: 83, img: ImageF, desc: "Traditional festival mask carving." },
-            { id: 7, title: "Silver Amulet", artisan: "Ugyen Zangmo", category: "Jewelry", region: "Thimphu", price: 5100, rating: 4, eco: false, createdAt: "2025-07-08", popularity: 79, img: ImageF, desc: "Hand‑crafted silver charm." },
-            { id: 8, title: "Clay Tea Set", artisan: "Kezang Wangdi", category: "Pottery", region: "Mongar", price: 3900, rating: 5, eco: true, createdAt: "2025-06-25", popularity: 68, img: ImageF, desc: "Earthen tea set fired in a kiln." },
-            { id: 9, title: "Wool Table Runner", artisan: "Tandin Dolma", category: "Textiles", region: "Bumthang", price: 1800, rating: 4, eco: true, createdAt: "2025-07-31", popularity: 70, img: ImageF, desc: "Handloom runner with knot motif." },
-            { id: 10, title: "Thangka Miniature", artisan: "Phuntsho Namgay", category: "Painting", region: "Paro", price: 8000, rating: 5, eco: false, createdAt: "2025-06-28", popularity: 95, img: ImageF, desc: "Miniature Buddhist thangka." },
-            { id: 11, title: "Leather Pouch", artisan: "Tshering Dema", category: "Leatherwork", region: "Trashiyangtse", price: 2300, rating: 3, eco: true, createdAt: "2025-07-03", popularity: 61, img: ImageF, desc: "Compact pouch with hand stitch." },
-            { id: 12, title: "Cane Wall Art", artisan: "Kinley Pelden", category: "Basketry", region: "Zhemgang", price: 2700, rating: 4, eco: true, createdAt: "2025-07-17", popularity: 54, img: ImageF, desc: "Geometric cane‑woven panel." },
-            { id: 13, title: "Stone Mortar & Pestle", artisan: "Sangay Wangchuk", category: "Stonecraft", region: "Haa", price: 2000, rating: 5, eco: true, createdAt: "2025-05-20", popularity: 48, img: ImageF, desc: "Hand‑hewn stone kitchen set." },
-            { id: 14, title: "Incense Burner", artisan: "Choki Wangmo", category: "Metalwork", region: "Thimphu", price: 3300, rating: 4, eco: false, createdAt: "2025-06-05", popularity: 66, img: ImageF, desc: "Brass burner with lid." },
-            { id: 15, title: "Lacquered Bowl Set", artisan: "Karma Lhamo", category: "Lacquerware", region: "Trongsa", price: 5600, rating: 5, eco: false, createdAt: "2025-07-24", popularity: 77, img: ImageF, desc: "Glossy layered lacquer bowls." },
-            { id: 16, title: "Handloom Cushion", artisan: "Deki Choden", category: "Textiles", region: "Paro", price: 2500, rating: 4, eco: true, createdAt: "2025-07-27", popularity: 58, img: ImageF, desc: "Soft cushion with stripe weave." },
-            { id: 17, title: "Paper Journal", artisan: "Yeshey Norbu", category: "Papercraft", region: "Bumthang", price: 900, rating: 4, eco: true, createdAt: "2025-06-30", popularity: 50, img: ImageF, desc: "Lokta paper, hand‑bound." },
-            { id: 18, title: "Copper Prayer Wheel", artisan: "Thinley Gyeltshen", category: "Metalwork", region: "Punakha", price: 7200, rating: 5, eco: false, createdAt: "2025-04-29", popularity: 84, img: ImageF, desc: "Spinning copper prayer wheel." },
-            { id: 19, title: "Brocade Wallet", artisan: "Sangay Dema", category: "Textiles", region: "Thimphu", price: 1400, rating: 3, eco: true, createdAt: "2025-07-11", popularity: 45, img: ImageF, desc: "Compact wallet with brocade." },
-            { id: 20, title: "Ceramic Vase", artisan: "Dorji Phuntsho", category: "Pottery", region: "Mongar", price: 3100, rating: 4, eco: false, createdAt: "2025-06-12", popularity: 60, img: ImageF, desc: "Matte ceramic single‑stem vase." },
-            { id: 21, title: "Carved Door Panel", artisan: "Wangchuk Namgay", category: "Woodwork", region: "Trongsa", price: 9800, rating: 5, eco: false, createdAt: "2025-05-08", popularity: 92, img: ImageF, desc: "Carved sus-shing door piece." },
-            { id: 22, title: "Reed Mat", artisan: "Pem Choden", category: "Basketry", region: "Zhemgang", price: 1100, rating: 4, eco: true, createdAt: "2025-07-07", popularity: 41, img: ImageF, desc: "Natural reed floor mat." },
-            { id: 23, title: "Turquoise Necklace", artisan: "Chimi Zangmo", category: "Jewelry", region: "Paro", price: 6400, rating: 5, eco: false, createdAt: "2025-07-25", popularity: 86, img: ImageF, desc: "Turquoise stones, silver clasp." },
-            { id: 24, title: "Woollen Socks", artisan: "Kezang Lhendup", category: "Textiles", region: "Haa", price: 800, rating: 4, eco: true, createdAt: "2025-07-28", popularity: 55, img: ImageF, desc: "Thick winter socks, handloom." },
-        ],
-        []
-    );
 
-    /* ---------- Derived filter lists ---------- */
-    const categories = useMemo(() => Array.from(new Set(products.map(p => p.category))).sort(), [products]);
-    const regions = useMemo(() => Array.from(new Set(products.map(p => p.region))).sort(), [products]);
-    const artisans = useMemo(() => Array.from(new Set(products.map(p => p.artisan))).sort(), [products]);
+
+    const navigate = useNavigate();
+
+    //logged user data
+    const [me, setMe] = useState(null);
+
+
+    useEffect(() => {
+        let cancel = false;
+        (async () => {
+            const user = await getMe();
+            if (!cancel) setMe(user.user);
+        })();
+        return () => { cancel = true; };
+    }, []);
+
+    const handleAddToCart = async (product, qty = 1) => {
+        try {
+            if (!me?._id && !me?.id && !me?.userId) {
+                alert("Please log in first.");
+                return;
+            }
+            const userId = me?._id || me?.id || me?.userId;
+
+            const ok = window.confirm(
+                `Add "${product.title}" (Nu. ${product.price}) to your cart?`
+            );
+            if (!ok) return;
+
+            await axios.post(
+                `${API_BASE}/api/carts/add-item`,
+                {
+                    userId,
+                    productId: product.id,
+                    quantity: qty,
+                    price: product.price,
+                },
+                { withCredentials: true }
+            );
+
+            // optional: toast/alert
+            alert("Added to cart ✅");
+            window.dispatchEvent(new Event("cart:updated"));
+        } catch (err) {
+            console.error(err);
+            alert("Failed to add to cart. Please try again.");
+        }
+    };
+
+    const handleQuickView = (product) => {
+
+        navigate(`/buyer/productDetails/${product.id}`, { state: { product } });
+    };
+
+    /* ---------- Load products ---------- */
+    const [rawProducts, setRawProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+
+    /* ---------- Load categories ---------- */
+    const [categories, setCategories] = useState([]); // names only
+    const [catLoading, setCatLoading] = useState(true);
+    const [catError, setCatError] = useState("");
+
+    useEffect(() => {
+        let cancel = false;
+
+        (async () => {
+            setLoading(true);
+            setLoadError("");
+            try {
+                const { data } = await axios.get(`${API_BASE}/api/products`, { withCredentials: true });
+                if (cancel) return;
+
+                const mapped = (Array.isArray(data) ? data : []).map((doc) => {
+                    const images = Array.isArray(doc.images) && doc.images.length
+                        ? doc.images
+                        : (doc.image ? [doc.image] : []);
+                    const firstImage = images[0] || ImageF;
+
+                    const seller = doc.seller || doc.userId || {};
+                    const category = doc.category || doc.categoryId || {};
+
+                    return {
+                        // IDs & basics
+                        id: doc._id,
+                        title: doc.name || "Untitled",
+                        desc: doc.description || "",
+
+                        // artisan info
+                        artisan: seller?.fullName || seller?.name || "Artisan",
+                        region: seller?.dzongkhag || seller?.region || "Bhutan",
+
+                        // category
+                        category:
+                            category?.name || (typeof category === "string" ? category : "Uncategorized"),
+
+                        // pricing/metrics
+                        price: Number(doc.price) || 0,
+                        rating: Number(doc.rating) || 0,
+                        eco: !!doc.eco,
+                        createdAt: doc.createdAt || doc.updatedAt || new Date().toISOString(),
+                        popularity: Number(doc.popularity) || 0,
+
+                        // images (both cover + gallery)
+                        img: firstImage || ImageF,   // cover image for cards
+                        images: images.length ? images : [ImageF], // full gallery for detail page
+
+
+                    };
+                });
+
+
+                setRawProducts(mapped);
+            } catch (e) {
+                console.error(e);
+                setLoadError("Failed to load products.");
+                setRawProducts([]);
+            } finally {
+                if (!cancel) setLoading(false);
+            }
+        })();
+
+        return () => { cancel = true; };
+    }, []);
+
+    useEffect(() => {
+        let cancel = false;
+
+        (async () => {
+            setCatLoading(true);
+            setCatError("");
+            try {
+                const { data } = await axios.get(`${API_BASE}/api/categories`, { withCredentials: true });
+                if (cancel) return;
+
+                const names = (Array.isArray(data) ? data : [])
+                    .map((c) => c?.name)
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b));
+
+                setCategories(names);
+            } catch (e) {
+                console.error(e);
+                setCatError("Failed to load categories.");
+                setCategories([]); // will fallback to derived categories below
+            } finally {
+                if (!cancel) setCatLoading(false);
+            }
+        })();
+
+        return () => { cancel = true; };
+    }, []);
+
+    /* ---------- Fallback derived categories if API returned none ---------- */
+    const derivedCategories = useMemo(
+        () => Array.from(new Set(rawProducts.map((p) => p.category))).sort((a, b) => a.localeCompare(b)),
+        [rawProducts]
+    );
+    const categoriesForUI = categories.length ? categories : derivedCategories;
+
+    /* ---------- Derived lists for other filters ---------- */
+    const regions = useMemo(
+        () => Array.from(new Set(rawProducts.map((p) => p.region))).sort((a, b) => a.localeCompare(b)),
+        [rawProducts]
+    );
+    const artisans = useMemo(
+        () => Array.from(new Set(rawProducts.map((p) => p.artisan))).sort((a, b) => a.localeCompare(b)),
+        [rawProducts]
+    );
 
     /* ---------- UI state ---------- */
     const [searchTerm, setSearchTerm] = useState("");
@@ -107,10 +233,11 @@ function BuyerMarketPlace() {
     const [sortBy, setSortBy] = useState("popular");
     const [visible, setVisible] = useState(PAGE_SIZE);
 
+
     /* ---------- Filtering + sorting ---------- */
     const filteredSorted = useMemo(() => {
         const term = searchCommit.trim().toLowerCase();
-        let list = products.filter((p) => {
+        let list = rawProducts.filter((p) => {
             const matchesTerm =
                 term.length === 0 ||
                 p.title.toLowerCase().includes(term) ||
@@ -118,7 +245,7 @@ function BuyerMarketPlace() {
             const catOK = selectedCategory === "all" || p.category === selectedCategory;
             const regOK = selectedRegion === "all" || p.region === selectedRegion;
             const artOK = selectedArtisan === "all" || p.artisan === selectedArtisan;
-            const priceOK = p.price <= maxPrice;
+            const priceOK = Number(p.price) <= maxPrice;
             const ecoOK = !ecoOnly || p.eco;
             return matchesTerm && catOK && regOK && artOK && priceOK && ecoOK;
         });
@@ -137,9 +264,21 @@ function BuyerMarketPlace() {
                 list.sort((a, b) => b.popularity - a.popularity);
         }
         return list;
-    }, [products, selectedCategory, selectedRegion, selectedArtisan, maxPrice, ecoOnly, sortBy, searchCommit]);
+    }, [
+        rawProducts,
+        selectedCategory,
+        selectedRegion,
+        selectedArtisan,
+        maxPrice,
+        ecoOnly,
+        sortBy,
+        searchCommit,
+    ]);
 
-    useEffect(() => setVisible(PAGE_SIZE), [selectedCategory, selectedRegion, selectedArtisan, maxPrice, ecoOnly, sortBy, searchCommit]);
+    useEffect(
+        () => setVisible(PAGE_SIZE),
+        [selectedCategory, selectedRegion, selectedArtisan, maxPrice, ecoOnly, sortBy, searchCommit]
+    );
 
     const shown = filteredSorted.slice(0, visible);
     const canLoadMore = visible < filteredSorted.length;
@@ -211,24 +350,37 @@ function BuyerMarketPlace() {
                                         <button
                                             onClick={() => setSelectedCategory("all")}
                                             className={`px-3 py-1.5 rounded-full text-sm border transition ${selectedCategory === "all"
-                                                    ? "bg-red-600 text-white border-red-600"
-                                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                                ? "bg-red-600 text-white border-red-600"
+                                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                                                 }`}
                                         >
                                             All
                                         </button>
-                                        {categories.map((c) => (
+
+                                        {/* Use API categories if present, else derived from products */}
+                                        {(categoriesForUI.length ? categoriesForUI : []).map((c) => (
                                             <button
                                                 key={c}
                                                 onClick={() => setSelectedCategory(c)}
                                                 className={`px-3 py-1.5 rounded-full text-sm border transition ${selectedCategory === c
-                                                        ? "bg-red-600 text-white border-red-600"
-                                                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                                    ? "bg-red-600 text-white border-red-600"
+                                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                                                     }`}
                                             >
                                                 {c}
                                             </button>
                                         ))}
+
+                                        {/* Tiny status text */}
+                                        <div className="w-full text-xs text-gray-400 mt-2">
+                                            {catLoading
+                                                ? "Loading categories…"
+                                                : catError
+                                                    ? catError
+                                                    : categories.length === 0
+                                                        ? "Showing categories from products"
+                                                        : null}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -293,7 +445,7 @@ function BuyerMarketPlace() {
                                 <div className="bg-gray-50 border rounded-xl p-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h3 className="font-semibold text-gray-700">Eco‑friendly Only</h3>
+                                            <h3 className="font-semibold text-gray-700">Eco-friendly Only</h3>
                                             <p className="text-xs text-gray-500">Sustainable materials & processes</p>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
@@ -320,10 +472,13 @@ function BuyerMarketPlace() {
 
                     {/* -------- Main column -------- */}
                     <main className="flex-1">
-                        {/* Sort & Results */}
                         <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
                             <p className="text-gray-600 mb-2 sm:mb-0">
-                                Showing {shown.length} of {filteredSorted.length} products
+                                {loading
+                                    ? "Loading products…"
+                                    : loadError
+                                        ? loadError
+                                        : `Showing ${shown.length} of ${filteredSorted.length} products`}
                             </p>
                             <div className="flex items-center">
                                 <span className="text-gray-600 mr-2">Sort by:</span>
@@ -342,15 +497,17 @@ function BuyerMarketPlace() {
 
                         {/* Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {shown.map((p) => (
-                                <ProductCard
-                                    key={p.id}
-                                    p={p}
-                                    onAddToCart={(item) => console.log("Add to cart:", item.id)}
-                                    onQuickView={(item) => console.log("Quick view:", item.id)}
-                                />
-                            ))}
-                            {shown.length === 0 && (
+                            {!loading &&
+                                shown.map((p) => (
+                                    <ProductCard
+                                        key={p.id}
+                                        p={p}
+                                        onAddToCart={(item) => handleAddToCart(item, 1)}
+                                        onQuickView={(item) => handleQuickView(item)}
+                                    />
+                                ))}
+
+                            {!loading && shown.length === 0 && (
                                 <div className="col-span-full text-center text-gray-500 py-10">
                                     No products match your filters.
                                 </div>
@@ -361,18 +518,17 @@ function BuyerMarketPlace() {
                         <div className="mt-8 bg-white p-4 rounded-lg shadow-sm">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    {canLoadMore ? (
+                                    {!loading && (canLoadMore ? (
                                         <button
-                                            onClick={() => setVisible(v => v + PAGE_SIZE)}
+                                            onClick={() => setVisible((v) => v + PAGE_SIZE)}
                                             className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition"
                                         >
                                             Load More Products
                                         </button>
                                     ) : (
                                         <span className="text-gray-500">No more products</span>
-                                    )}
+                                    ))}
                                 </div>
-                                {/* Decorative pager (non-functional) */}
                                 <div className="hidden md:block">
                                     <nav className="flex items-center space-x-1">
                                         <button className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100 text-gray-800 hover:bg-red-600 hover:text-white">
