@@ -39,6 +39,7 @@ import BuyerAbout from './pages/buyers/BuyerAbout';
 import BuyerOrders from './pages/buyers/BuyerOrders';
 import BuyerCart from './pages/buyers/BuyerCart';
 import BuyerCheckout from './pages/buyers/BuyerCheckout';
+import BuyerOrderDetail from './pages/buyers/BuyerOrderDetail';
 import './App.css';
 
 //auth pages
@@ -83,6 +84,7 @@ function App() {
           <Route path="/buyer/orders" element={<BuyerOrders />} />
           <Route path="/buyer/cart" element={<BuyerCart />} />
           <Route path="/buyer/checkout" element={<BuyerCheckout />} />
+          <Route path="/buyer/orders/:orderId" element={<BuyerOrderDetail />} />
 
           {/* Admin Routes (No protection) */}
           <Route path="/admin/login" element={<AdminLogin />} />
