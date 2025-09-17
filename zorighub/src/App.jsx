@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import './App.css';
 
 import { AuthProvider } from './context/AuthContext';
 import Header from './components/nav/Header';
@@ -40,7 +40,8 @@ import BuyerOrders from './pages/buyers/BuyerOrders';
 import BuyerCart from './pages/buyers/BuyerCart';
 import BuyerCheckout from './pages/buyers/BuyerCheckout';
 import BuyerOrderDetail from './pages/buyers/BuyerOrderDetail';
-import './App.css';
+import Payment from './pages/buyers/Payment';
+
 
 //auth pages
 import Login from './components/auth/login';
@@ -85,6 +86,7 @@ function App() {
           <Route path="/buyer/cart" element={<BuyerCart />} />
           <Route path="/buyer/checkout" element={<BuyerCheckout />} />
           <Route path="/buyer/orders/:orderId" element={<BuyerOrderDetail />} />
+          <Route path="/buyer/checkout/payment" element={<Payment />} />
 
           {/* Admin Routes (No protection) */}
           <Route path="/admin/login" element={<AdminLogin />} />
